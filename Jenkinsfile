@@ -46,6 +46,19 @@ pipeline {
                     python main.py
                 '''
             }
+        }   
+
+        stage('Promote Best Model') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    python scripts/promote_best.py
+                '''
+            }
         }
+    post {
+        success { echo "✅ Training & promotion succeeded!" }
+        failure  { echo "❌ Pipeline failed" }
     }
+}
 }
