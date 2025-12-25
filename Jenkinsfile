@@ -26,6 +26,9 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
+                    apt-get update
+                    apt-get install -y libgomp1
+
                     python -m venv venv
                     . venv/bin/activate
 
