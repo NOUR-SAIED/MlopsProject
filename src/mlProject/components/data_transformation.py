@@ -4,101 +4,125 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 from mlProject.entity.config_entity import DataTransformationConfig
+from sklearn.preprocessing import LabelEncoder
+import joblib
 
+class Preprocessor:
+    def __init__(self, num_cols, cat_cols, drop_cols=None):
+        self.num_cols = num_cols
+        self.cat_cols = cat_cols
+        self.label_encoders = {}
+        self.drop_cols = drop_cols if drop_cols is not None else []
+
+    def fit_transform(self, X_train):
+        X_train = X_train.copy()
+        
+        # Supprimer les colonnes inutiles
+        X_train = X_train.drop(columns=self.drop_cols, errors="ignore")
+        self.num_cols = [c for c in self.num_cols if c not in self.drop_cols]
+        self.cat_cols = [c for c in self.cat_cols if c not in self.drop_cols]
+
+        # Numérique : imputation + clipping + outliers
+        for col in self.num_cols:
+            X_train[col] = X_train[col].fillna(X_train[col].median())
+            Q1 = X_train[col].quantile(0.25)
+            Q3 = X_train[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower = Q1 - 1.5 * IQR
+            upper = Q3 + 1.5 * IQR
+            X_train[col] = X_train[col].clip(lower, upper)
+
+        # Catégorique : LabelEncoder
+        for col in self.cat_cols:
+            le = LabelEncoder()
+            X_train[col] = le.fit_transform(X_train[col])
+            self.label_encoders[col] = le
+        
+        return X_train
+
+    def transform(self, X_test):
+        X_test = X_test.copy()
+
+        # Supprimer les colonnes inutiles
+        X_test = X_test.drop(columns=self.drop_cols, errors="ignore")
+
+        # Numérique : imputation + clipping + outliers
+        for col in self.num_cols:
+            X_test[col] = X_test[col].fillna(X_test[col].median())
+            Q1 = X_test[col].quantile(0.25)
+            Q3 = X_test[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower = Q1 - 1.5 * IQR
+            upper = Q3 + 1.5 * IQR
+            X_test[col] = X_test[col].clip(lower, upper)
+
+        # Catégorique : transformation avec LabelEncoder sauvegardé
+        for col in self.cat_cols:
+            le = self.label_encoders[col]
+            X_test[col] = le.transform(X_test[col])
+        
+        return X_test
+
+    def save(self, filepath="preprocessor.pkl"):
+        joblib.dump({
+            "num_cols": self.num_cols,
+            "cat_cols": self.cat_cols,
+            "label_encoders": self.label_encoders,
+            "drop_cols": self.drop_cols
+        }, filepath)
+        print(f"Preprocessor sauvegardé dans {filepath} !")
 
 class DataTransformation:
-    def __init__(self, config : DataTransformationConfig, target: str):
+    def __init__(self, config, target: str):
         self.config = config
         self.target = target
-        self.df = pd.read_csv(self.config.data_path)  # Charger le dataset complet
-
-    def handle_missing_target(self):
-        self.df.dropna(subset=[self.target], inplace=True)
-        if self.df[self.target].dtype == object:
-            self.df[self.target] = self.df[self.target].map({'Yes':1,'No':0})
-        return self
-
-    def fill_missing_values(self):
-        mean_cols = ['MinTemp','MaxTemp','Temp9am','Humidity3pm','Pressure9am','Pressure3pm']
-        median_cols = ['Rainfall','WindSpeed9am','WindSpeed3pm','Humidity9am','WindGustSpeed','Sunshine']
-        cat_cols = ['WindGustDir', 'WindDir9am', 'WindDir3pm','Location']
-
-        for col in mean_cols:
-            if col in self.df.columns: 
-                self.df[col] = self.df[col].fillna(self.df[col].mean())
-        for col in median_cols:
-            if col in self.df.columns: 
-                self.df[col] = self.df[col].fillna(self.df[col].median())
-        for col in cat_cols:
-            if col in self.df.columns: 
-                self.df[col] = self.df[col].fillna(self.df[col].mode()[0])
-
-        if 'RainToday' in self.df.columns:
-            self.df['RainToday'] = self.df['RainToday'].map({'Yes':1,'No':0}).fillna(0)
-        return self
-
-
-    def log_transform(self):
-        skewed_cols = ['Rainfall','WindGustSpeed','Sunshine','RISK_MM']
-        for col in skewed_cols:
-            if col in self.df.columns: self.df[col] = np.log1p(self.df[col])
-        return self
-
-    def handle_outliers(self):
-        cols = ['Rainfall','WindGustSpeed','RISK_MM']
-        for col in cols:
-            if col in self.df.columns:
-                upper = self.df[col].quantile(0.99)
-                self.df[col] = np.clip(self.df[col], None, upper)
-        return self
-
-    def fix_inconsistencies(self):
-        if 'MinTemp' in self.df.columns and 'MaxTemp' in self.df.columns:
-            invalid = self.df['MinTemp'] > self.df['MaxTemp']
-            self.df.loc[invalid, ['MinTemp','MaxTemp']] = self.df.loc[invalid, ['MaxTemp','MinTemp']].values
-        if 'RainToday' in self.df.columns:
-            self.df.loc[(self.df['Rainfall']>0) & (self.df['RainToday']==0), 'RainToday'] = 1
-        return self
-
-    def drop_unnecessary_columns(self):
-        drop_cols = ['RISK_MM','Evaporation','Cloud9am','Cloud3pm','Temp3pm']
-        for col in drop_cols:
-            if col in self.df.columns: self.df.drop(columns=[col], inplace=True)
-        return self
-
-    def encode_categorical(self):
-        cat_features = ['Location','WindGustDir', 'WindDir9am', 'WindDir3pm']
-        for col in cat_features:
-            if col in self.df.columns: 
-                self.df = pd.get_dummies(self.df, columns=[col], drop_first=True)
-        return self
-
-    def extract_weekday(self):
-        if 'Date' in self.df.columns:
-            self.df['Date'] = pd.to_datetime(self.df['Date'])
-            self.df['Weekday'] = self.df['Date'].dt.weekday
-            self.df.drop(columns='Date', inplace=True)
-        return self
+        self.df = pd.read_csv(self.config.data_path)
 
     def transform_and_split(self, test_size=0.20, random_state=42):
-        # Applique toutes les transformations
-        self.handle_missing_target()\
-            .fill_missing_values()\
-            .log_transform()\
-            .handle_outliers()\
-            .fix_inconsistencies()\
-            .drop_unnecessary_columns()\
-            .encode_categorical()\
-            .extract_weekday()
+        # Colonnes numériques et catégoriques
+        num_cols = [
+            "Age", "Session_Duration_Avg", "Pages_Per_Session", "Wishlist_Items",
+            "Days_Since_Last_Purchase", "Discount_Usage_Rate", "Returns_Rate",
+            "Email_Open_Rate", "Customer_Service_Calls", "Product_Reviews_Written",
+            "Social_Media_Engagement_Score", "Mobile_App_Usage", 
+            "Payment_Method_Diversity", "Credit_Balance"
+        ]
+        cat_cols = ["Gender", "Country", "City", "Signup_Quarter"]
+        drop_cols = ["Gender", "Signup_Quarter", "Country"]  # colonnes à supprimer
+        # Mettre à jour cat_cols après drop
+        cat_cols = [c for c in cat_cols if c not in drop_cols]
+
+        # Split features/target
+        X = self.df.drop(columns=[self.target])
+        y = self.df[self.target]
 
         # Split train/test
-        train, test = train_test_split(self.df, test_size=test_size, random_state=random_state)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_state, stratify=y
+        )
 
-        # Sauvegarde
+        # Sauvegarder l'ordre des features
+        FEATURES = X_train.columns.tolist()
         os.makedirs(self.config.root_dir, exist_ok=True)
-        train.to_csv(os.path.join(self.config.root_dir, "train.csv"), index=False)
-        test.to_csv(os.path.join(self.config.root_dir, "test.csv"), index=False)
+        joblib.dump(FEATURES, os.path.join(self.config.root_dir, "feature_order.pkl"))
+
+        # Preprocessing
+        preprocessor = Preprocessor(num_cols, cat_cols, drop_cols=drop_cols)
+        X_train_prep = preprocessor.fit_transform(X_train)
+        X_test_prep = preprocessor.transform(X_test)
+        preprocessor.save(os.path.join(self.config.root_dir, "preprocessor.pkl"))
+
+        # Ajouter la target correctement
+        X_train_prep = X_train_prep.copy()
+        X_test_prep = X_test_prep.copy()
+        X_train_prep[self.target] = y_train.values
+        X_test_prep[self.target] = y_test.values
+
+        # Sauvegarder CSV
+        X_train_prep.to_csv(os.path.join(self.config.root_dir, "train.csv"), index=False)
+        X_test_prep.to_csv(os.path.join(self.config.root_dir, "test.csv"), index=False)
 
         logger.info("Data transformed and split into training and test sets")
-        logger.info(f"Train shape: {train.shape}, Test shape: {test.shape}")
-        print(f"Train shape: {train.shape}, Test shape: {test.shape}")
+        print(f"Train shape: {X_train_prep.shape}, Test shape: {X_test_prep.shape}")
+
+        return X_train_prep, X_test_prep, y_train, y_test

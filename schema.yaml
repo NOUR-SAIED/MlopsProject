@@ -1,28 +1,29 @@
 COLUMNS:
-  Date: object
-  Location: object
-  MinTemp: float64
-  MaxTemp: float64
-  Rainfall: float64
-  Evaporation: float64
-  Sunshine: float64
-  WindGustDir: object
-  WindGustSpeed: float64
-  WindDir9am: object
-  WindDir3pm: object
-  WindSpeed9am: float64
-  WindSpeed3pm: float64
-  Humidity9am: float64
-  Humidity3pm: float64
-  Pressure9am: float64
-  Pressure3pm: float64
-  Cloud9am: float64
-  Cloud3pm: float64
-  Temp9am: float64
-  Temp3pm: float64
-  RainToday: object
-  RISK_MM : float64
-  RainTomorrow: object
+  Age: float64
+  Gender: object
+  Country: object
+  City: object
+  Membership_Years: float64
+  Login_Frequency: float64
+  Session_Duration_Avg: float64
+  Pages_Per_Session: float64
+  Cart_Abandonment_Rate: float64
+  Wishlist_Items: float64
+  Total_Purchases: float64
+  Average_Order_Value: float64
+  Days_Since_Last_Purchase: float64
+  Discount_Usage_Rate: float64
+  Returns_Rate: float64
+  Email_Open_Rate: float64
+  Customer_Service_Calls: float64
+  Product_Reviews_Written: float64
+  Social_Media_Engagement_Score: float64
+  Mobile_App_Usage: float64
+  Payment_Method_Diversity: float64
+  Lifetime_Value: float64
+  Credit_Balance: float64
+  Signup_Quarter: object
 
 TARGET_COLUMN:
-  name: RainTomorrow
+  name: Churned
+  

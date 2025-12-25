@@ -12,6 +12,8 @@
 8. Update the main.py
 9. Update the app.py
 
+# repo for data : https://github.com/hannamhiri/ecommerce_customer_churn_dataset
+
 # Cloner le dépôt et se déplacer dans le dossier
 git clone https://github.com/hannamhiri/MlopsProject.git
 cd MlopsProject

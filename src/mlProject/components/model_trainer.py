@@ -11,10 +11,21 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
 
+class SMOTEHandler:
+    def __init__(self, random_state=42):
+        self.random_state = random_state
+    
+    def fit_resample(self, X_train, y_train):
+        smote = SMOTE(random_state=self.random_state)
+        X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+        return X_resampled, y_resampled
+
+
 class ModelTrainer:
     def __init__(self, config: ModelTrainerConfig, all_params: dict):
         self.config = config
         self.all_params = all_params  # dictionnaire contenant les hyperparamètres pour chaque modèle
+        self.smote_handler = SMOTEHandler(random_state=42)  # ajout du handler SMOTE
 
     def train(self):
         # 1️⃣ Charger les données
@@ -28,9 +39,8 @@ class ModelTrainer:
         X_test = test_data.drop([self.config.target_column], axis=1)
         y_test = test_data[self.config.target_column]
 
-        # 3️⃣ Appliquer SMOTE uniquement sur le train
-        smote = SMOTE(random_state=42)
-        X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
+        # 3️⃣ Appliquer SMOTE via SMOTEHandler uniquement sur le train
+        X_train_res, y_train_res = self.smote_handler.fit_resample(X_train, y_train)
 
         logger.info("Target distribution AFTER SMOTE:")
         logger.info(pd.Series(y_train_res).value_counts().to_string())
@@ -68,6 +78,7 @@ class ModelTrainer:
             model_path = os.path.join(self.config.root_dir, f"{name}.pkl")
             joblib.dump(model, model_path)
             logger.info(f"{name} saved at {model_path}")
+
 
 
 

@@ -21,7 +21,7 @@ class DataTransformationTrainingPipeline:
             if status == "True":
                  config = ConfigurationManager()
                  data_transformation_config = config.get_data_transformation_config()
-                 target_column = "RainTomorrow"
+                 target_column = "Churned"
                  data_transformation = DataTransformation(config=data_transformation_config, target=target_column)
                  data_transformation.transform_and_split()
 
