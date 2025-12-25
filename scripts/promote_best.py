@@ -51,7 +51,7 @@ def main():
 
     print(f"\n🏆 Best model: {best_model} ({metric_name} = {best_score:.4f})")
 
-    # Promote to Staging in MLflow
+    # Promote to Staging in MLflow 
     try:
         client = mlflow.MlflowClient()
         registered_name = f"{best_model}Model"
@@ -60,13 +60,14 @@ def main():
 
         print(f"→ Promoting {registered_name} v{version} to 'Staging'...")
 
-        # Use alias instead of transition_model_version_stage
-        client.set_registered_model_alias(
+        client.transition_model_version_stage(
             name=registered_name,
-            alias="staging",
-            version=version
+            version=version,
+            stage="Staging",  # note: MLflow 2.2.2 uses capitalized stage names
+            archive_existing_versions=True
         )
-        print("✅ Promotion successful! Alias 'staging' points to the new version.")
+
+        print("✅ Promotion successful! Version is now in 'Staging'.")
 
     except Exception as e:
         print(f"❌ Promotion failed: {e}")
