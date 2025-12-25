@@ -14,23 +14,32 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                sh 'rm -rf artifacts/ || echo "No artifacts/ to remove"'
+                sh 'rm -rf artifacts/ venv/ || echo "Cleanup"'
                 sh 'find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Python Environment') {
             steps {
-                sh 'python3 -m pip install --upgrade pip'
-                sh 'python3 -m pip install -r requirements.txt'
+                sh '''
+                    # Create and activate virtual environment
+                    python3 -m venv venv
+                    . venv/bin/activate
+
+                    # Upgrade pip & install
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
             }
         }
 
         stage('Run Training') {
             steps {
                 sh '''
+                    # Activate venv and run
+                    . venv/bin/activate
                     export MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}"
-                    python3 main.py
+                    python main.py
                 '''
             }
         }
