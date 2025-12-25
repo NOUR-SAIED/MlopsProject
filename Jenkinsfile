@@ -56,9 +56,10 @@ pipeline {
                 '''
             }
         }
-    post {
-        success { echo "✅ Training & promotion succeeded!" }
-        failure  { echo "❌ Pipeline failed" }
-    }
+    
 }
+    post {
+            success { echo "✅ Training & promotion succeeded!" }
+            failure  { echo "❌ Pipeline failed" }
+        }
 }
