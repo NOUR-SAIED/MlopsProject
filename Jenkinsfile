@@ -19,14 +19,23 @@ pipeline {
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Install Python 3.11') {
             steps {
                 sh '''
-                    # Create and activate virtual environment
-                    python3 -m venv venv
+                    # Install Python 3.11 (supports scikit-learn 1.2.2)
+                    apt-get update && apt-get install -y python3.11 python3.11-venv python3.11-dev
+                '''
+            }
+        }
+
+        stage('Setup Python 3.11 Environment') {
+            steps {
+                sh '''
+                    # Create venv with Python 3.11
+                    python3.11 -m venv venv
                     . venv/bin/activate
 
-                    # Upgrade pip & install
+                    # Upgrade pip & install EXACT requirements (no changes!)
                     pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
