@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11-slim'
-            args '-u root'
-        }
-    }
+    agent any
 
     environment {
         MLFLOW_TRACKING_URI = "https://dagshub.com/hannamhiri/MlopsProject.mlflow"
@@ -13,6 +8,7 @@ pipeline {
     }
 
     stages {
+
         stage('SCM Checkout') {
             steps {
                 checkout scm
@@ -21,38 +17,27 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                sh 'rm -rf artifacts/ venv/ || true'
+                sh 'rm -rf artifacts venv || true'
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Train & Register Model (Python 3.11)') {
+            agent {
+                docker {
+                    image 'python:3.11-slim'
+                    args '-u root'
+                }
+            }
             steps {
                 sh '''
                     apt-get update
-                    apt-get install -y libgomp1
+                    apt-get install -y libgomp1 gcc
                     python -m venv venv
                     . venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                '''
-            }
-        }
 
-        stage('Run Training') {
-            steps {
-                sh '''
-                    . venv/bin/activate
-                    export MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}"
                     python main.py
-                '''
-            }
-        }   
-
-        stage('Promote Best Model') {
-            steps {
-                sh '''
-                    . venv/bin/activate
-                    python scripts/promote_best.py
                 '''
             }
         }
@@ -60,12 +45,11 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                 . venv/bin/activate
-                 docker build -t noursaied622/mlops-app:latest .
-            '''
+                    docker build -t noursaied622/mlops-app:latest .
+                '''
             }
         }
-        
+
         stage('Push Docker Image') {
             steps {
                 script {
@@ -75,5 +59,5 @@ pipeline {
                 }
             }
         }
-    }   
+    }
 }
