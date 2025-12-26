@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 from mlProject.entity.config_entity import DataTransformationConfig
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
 import joblib
 
 class Preprocessor:
@@ -33,10 +33,17 @@ class Preprocessor:
             X_train[col] = X_train[col].clip(lower, upper)
 
         # Catégorique : LabelEncoder
-        for col in self.cat_cols:
-            le = LabelEncoder()
-            X_train[col] = le.fit_transform(X_train[col])
-            self.label_encoders[col] = le
+        if self.cat_cols:
+            lself.encoder.fit(X_train[self.cat_cols])
+            self.is_fitted = True
+            # Transform and replace
+            encoded = self.encoder.transform(X_train[self.cat_cols])
+            encoded_df = pd.DataFrame(encoded, 
+                                     columns=self.encoder.get_feature_names_out(self.cat_cols),
+                                     index=X_train.index)
+            # Drop original categorical columns and add encoded ones
+            X_train = X_train.drop(columns=self.cat_cols)
+            X_train = pd.concat([X_train, encoded_df], axis=1)
         
         return X_train
 
@@ -56,10 +63,16 @@ class Preprocessor:
             upper = Q3 + 1.5 * IQR
             X_test[col] = X_test[col].clip(lower, upper)
 
-        # Catégorique : transformation avec LabelEncoder sauvegardé
-        for col in self.cat_cols:
-            le = self.label_encoders[col]
-            X_test[col] = le.transform(X_test[col])
+        # Transform categorical columns with OneHotEncoder
+        if self.cat_cols and self.is_fitted:
+            # Encode categorical columns
+            encoded = self.encoder.transform(X_test[self.cat_cols])
+            encoded_df = pd.DataFrame(encoded, 
+                                     columns=self.encoder.get_feature_names_out(self.cat_cols),
+                                     index=X_test.index)
+            # Drop original categorical columns and add encoded ones
+            X_test = X_test.drop(columns=self.cat_cols, errors='ignore')
+            X_test = pd.concat([X_test, encoded_df], axis=1)
         
         return X_test
 
