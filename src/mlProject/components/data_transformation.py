@@ -34,7 +34,7 @@ class Preprocessor:
 
         # Catégorique : LabelEncoder
         if self.cat_cols:
-            lself.encoder.fit(X_train[self.cat_cols])
+            self.encoder.fit(X_train[self.cat_cols])
             self.is_fitted = True
             # Transform and replace
             encoded = self.encoder.transform(X_train[self.cat_cols])
