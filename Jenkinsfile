@@ -30,10 +30,8 @@ pipeline {
                 sh '''
                     apt-get update
                     apt-get install -y libgomp1
-
                     python -m venv venv
                     . venv/bin/activate
-
                     pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
@@ -58,10 +56,24 @@ pipeline {
                 '''
             }
         }
-    
-}
-    post {
-            success { echo "✅ Training & promotion succeeded!" }
-            failure  { echo "❌ Pipeline failed" }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                 . venv/bin/activate
+                 docker build -t noursaied622/mlops-app:latest .
+            '''
+            }
         }
+        
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('', 'DOCKER_HUB') {
+                        docker.image('noursaied622/mlops-app:latest').push('latest')
+                    }
+                }
+            }
+        }
+    }   
 }
