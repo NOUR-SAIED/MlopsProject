@@ -8,6 +8,8 @@ pipeline {
 
     environment {
         MLFLOW_TRACKING_URI = "https://dagshub.com/hannamhiri/MlopsProject.mlflow"
+        MLFLOW_TRACKING_USERNAME = "hannamhiri"
+        MLFLOW_TRACKING_PASSWORD = credentials('DAGSHUB_TOKEN')
     }
 
     stages {
