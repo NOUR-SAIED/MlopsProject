@@ -7340,6 +7340,7 @@ textarea.form-control-lg {
 
 .fw-bold {
   font-weight: 700 !important;
+  color: black !important;
 }
 
 .fw-bolder {
@@ -7541,7 +7542,7 @@ textarea.form-control-lg {
 
 .bg-dark {
   --bs-bg-opacity: 1;
-  background-color: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity)) !important;
+  background-color: #DDD0C8 !important;
 }
 
 .bg-black {
