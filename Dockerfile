@@ -17,7 +17,7 @@ RUN pip install --prefix=/install -r requirements.txt
 
 # Copy only artifacts and necessary scripts
 COPY artifacts/model_trainer/LightGBM.pkl artifacts/data_transformation/preprocessor.pkl ./
-COPY app.py predict.py ./
+COPY app.py pipeline/prediction.py ./
 
 # Stage 2: Final runtime image
 FROM python:3.11-slim
