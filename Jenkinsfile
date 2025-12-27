@@ -5,6 +5,7 @@ pipeline {
         MLFLOW_TRACKING_URI = "https://dagshub.com/hannamhiri/MlopsProject.mlflow"
         MLFLOW_TRACKING_USERNAME = "hannamhiri"
         MLFLOW_TRACKING_PASSWORD = credentials('DAGSHUB_TOKEN')
+        IMAGE_NAME = "noursaied622/mlops-app"
     }
 
     stages {
@@ -17,7 +18,9 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                sh 'rm -rf artifacts venv || true'
+                sh '''
+                    rm -rf artifacts venv
+                '''
             }
         }
 
@@ -26,18 +29,25 @@ pipeline {
                 docker {
                     image 'python:3.11-slim'
                     args '-u root'
+                    reuseNode true
                 }
             }
             steps {
                 sh '''
+                    set -e
+
                     apt-get update
                     apt-get install -y libgomp1 gcc
-                    python -m venv venv
-                    . venv/bin/activate
+
+                    python --version
+
                     pip install --upgrade pip
                     pip install -r requirements.txt
 
                     python main.py
+
+                    echo "Artifacts generated:"
+                    ls -R artifacts
                 '''
             }
         }
@@ -45,7 +55,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build -t noursaied622/mlops-app:latest .
+                    ls -R artifacts
+                    docker build -t $IMAGE_NAME:latest .
                 '''
             }
         }
@@ -54,7 +65,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('', 'DOCKER_HUB') {
-                        docker.image('noursaied622/mlops-app:latest').push('latest')
+                        docker.image("$IMAGE_NAME:latest").push('latest')
                     }
                 }
             }
