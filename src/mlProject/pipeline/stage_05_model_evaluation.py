@@ -9,10 +9,11 @@ class ModelEvaluationTrainingPipeline:
         pass
 
     def main(self):
-        config = ConfigurationManager()
-        model_evaluation_config = config.get_model_evaluation_config()
-        model_evaluation_config = ModelEvaluation(config=model_evaluation_config)
-        model_evaluation_config.log_into_mlflow()
+        config_manager = ConfigurationManager()
+        model_eval_cfg = config_manager.get_model_evaluation_config()  # now includes preprocessor_path
+        model_eval_component = ModelEvaluation(config=model_eval_cfg)
+        model_eval_component.log_into_mlflow()
+
 
 
 if __name__ == '__main__':

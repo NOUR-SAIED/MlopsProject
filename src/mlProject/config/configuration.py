@@ -6,6 +6,7 @@ from mlProject.entity.config_entity import (DataIngestionConfig,
                                             DataTransformationConfig,
                                             ModelTrainerConfig,
                                             ModelEvaluationConfig)
+from pathlib import Path
 
 
 class ConfigurationManager:
@@ -104,6 +105,7 @@ class ConfigurationManager:
             metric_file_name=config.metric_file_name,
             target_column=schema.name,
             mlflow_uri="https://dagshub.com/hannamhiri/MlopsProject.mlflow",
+            preprocessor_path=Path(self.config.data_transformation.preprocessor_path)
         )
 
         return model_evaluation_config
