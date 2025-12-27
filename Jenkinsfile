@@ -21,14 +21,35 @@ pipeline {
             steps {
                 echo "Building and running training container..."
                 sh 'docker build -f Dockerfile.train -t mlops-train:latest .'
-                sh 'docker run --rm -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} mlops-train:latest'
+                // mount workspace so artifacts written by container persist to Jenkins workspace
+                sh '''
+                   docker run --rm \
+                     -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \
+                     -e MLFLOW_TRACKING_USERNAME=${MLFLOW_TRACKING_USERNAME} \
+                     -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} \
+                     -v ${WORKSPACE}:/app \
+                     -w /app \
+                     mlops-train:latest
+                '''
+                // stash artifacts as a safety (useful if subsequent stages run on different agents)
+                stash includes: 'artifacts/**', name: 'pipeline_artifacts', allowEmpty: true
             }
         }
 
         stage('Promote Best Model') {
             steps {
                 echo "Promoting the best model using training container..."
-                sh 'docker run --rm -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} mlops-train:latest python promote_best.py'
+                // ensure artifacts are available on this agent
+                unstash 'pipeline_artifacts'
+                sh '''
+                   docker run --rm \
+                     -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \
+                     -e MLFLOW_TRACKING_USERNAME=${MLFLOW_TRACKING_USERNAME} \
+                     -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} \
+                     -v ${WORKSPACE}:/app \
+                     -w /app \
+                     mlops-train:latest python promote_best.py
+                '''
             }
         }
 

@@ -6,6 +6,7 @@ import numpy as np
 from mlProject.entity.config_entity import DataTransformationConfig
 from sklearn.preprocessing import LabelEncoder
 import joblib
+from pathlib import Path
 
 class Preprocessor:
     def __init__(self, num_cols, cat_cols, drop_cols=None):
@@ -14,7 +15,7 @@ class Preprocessor:
         self.label_encoders = {}
         self.drop_cols = drop_cols if drop_cols is not None else []
 
-    def fit_transform(self, X_train):
+    def fit_transform(self, X_train: pd.DataFrame) -> pd.DataFrame:
         X_train = X_train.copy()
         
         # Supprimer les colonnes inutiles
@@ -35,12 +36,14 @@ class Preprocessor:
         # Catégorique : LabelEncoder
         for col in self.cat_cols:
             le = LabelEncoder()
+            # If there are missing values or unseen labels this may fail; ensure consistent handling
+            X_train[col] = X_train[col].astype(str).fillna("nan")
             X_train[col] = le.fit_transform(X_train[col])
             self.label_encoders[col] = le
         
         return X_train
 
-    def transform(self, X_test):
+    def transform(self, X_test: pd.DataFrame) -> pd.DataFrame:
         X_test = X_test.copy()
 
         # Supprimer les colonnes inutiles
@@ -58,24 +61,28 @@ class Preprocessor:
 
         # Catégorique : transformation avec LabelEncoder sauvegardé
         for col in self.cat_cols:
-            le = self.label_encoders[col]
+            le = self.label_encoders.get(col)
+            if le is None:
+                raise KeyError(f"LabelEncoder for column '{col}' not found in preprocessor.")
+            X_test[col] = X_test[col].astype(str).fillna("nan")
             X_test[col] = le.transform(X_test[col])
         
         return X_test
 
-    def save(self, filepath="preprocessor.pkl"):
-        preprocessor_dict = {
-            "num_cols": self.num_cols,
-            "cat_cols": self.cat_cols,
-            "drop_cols": self.drop_cols,
-            "label_encoders": self.label_encoders
-        }
-        joblib.dump(preprocessor_dict, filepath)
-        print(f"Preprocessor sauvegardé sous forme de dict dans {filepath}")
+    def save(self, filepath: str = "preprocessor.pkl"):
+        """
+        Save the Preprocessor instance so that joblib.load returns an object
+        with a .transform(...) method (used by the PredictionPipeline).
+        """
+        dirpath = os.path.dirname(filepath)
+        if dirpath:
+            os.makedirs(dirpath, exist_ok=True)
+        joblib.dump(self, filepath)
+        logger.info(f"Preprocessor instance saved to {filepath}")
 
 
 class DataTransformation:
-    def __init__(self, config, target: str):
+    def __init__(self, config: DataTransformationConfig, target: str):
         self.config = config
         self.target = target
         self.df = pd.read_csv(self.config.data_path)
@@ -112,7 +119,9 @@ class DataTransformation:
         preprocessor = Preprocessor(num_cols, cat_cols, drop_cols=drop_cols)
         X_train_prep = preprocessor.fit_transform(X_train)
         X_test_prep = preprocessor.transform(X_test)
-        preprocessor.save(os.path.join(self.config.root_dir, "preprocessor.pkl"))
+        # Save the Preprocessor instance (so PredictionPipeline can load and use it)
+        preprocessor_path = os.path.join(self.config.root_dir, "preprocessor.pkl")
+        preprocessor.save(preprocessor_path)
 
         # Ajouter la target correctement
         X_train_prep = X_train_prep.copy()

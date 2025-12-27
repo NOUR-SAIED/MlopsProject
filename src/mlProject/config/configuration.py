@@ -97,6 +97,21 @@ class ConfigurationManager:
 
         create_directories([config.root_dir])
 
+        # safe retrieval of preprocessor_path to avoid BoxKeyError
+        preproc_str = None
+        # config.data_transformation is a Box; use .get to avoid exceptions
+        try:
+            preproc_str = self.config.data_transformation.get("preprocessor_path")
+        except Exception:
+            preproc_str = None
+
+        if not preproc_str:
+            raise KeyError(
+                "Missing configuration: data_transformation.preprocessor_path in config/config.yaml"
+            )
+
+        preprocessor_path = Path(preproc_str)
+
         model_evaluation_config = ModelEvaluationConfig(
             root_dir=config.root_dir,
             test_data_path=config.test_data_path,
@@ -105,7 +120,7 @@ class ConfigurationManager:
             metric_file_name=config.metric_file_name,
             target_column=schema.name,
             mlflow_uri="https://dagshub.com/hannamhiri/MlopsProject.mlflow",
-            preprocessor_path=Path(self.config.data_transformation.preprocessor_path)
+            preprocessor_path=preprocessor_path
         )
 
         return model_evaluation_config
