@@ -30,15 +30,6 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                sh '''
-                    ls -R artifacts
-                    docker build -t $IMAGE_NAME:latest .
-                '''
-            }
-        }
-
         stage('Build Serving Docker Image') {
             steps {
                 sh 'docker build -f Dockerfile.serve -t noursaied622/mlops-app:latest .'
