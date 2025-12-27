@@ -94,3 +94,11 @@ class ModelEvaluation:
                     )
                 else:
                     mlflow.sklearn.log_model(model, "model")
+                # 🔹 Log preprocessor as artifact
+                preprocessor_path = Path(self.config.root_dir) / "artifacts/data_transformation/preprocessor.pkl"
+                if preprocessor_path.exists():
+                    mlflow.log_artifact(str(preprocessor_path), artifact_path="preprocessor")
+                    logger.info(f"✅ Preprocessor logged for {model_name}")
+                else:
+                    logger.warning(f"⚠️ Preprocessor not found at {preprocessor_path}")
+                

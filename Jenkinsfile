@@ -6,6 +6,7 @@ pipeline {
         MLFLOW_TRACKING_USERNAME = "hannamhiri"
         MLFLOW_TRACKING_PASSWORD = credentials('DAGSHUB_TOKEN')
         IMAGE_NAME = "noursaied622/mlops-app"
+        DOCKER_HUB_CREDENTIALS = 'DOCKER_HUB'
     }
 
     stages {
@@ -16,39 +17,16 @@ pipeline {
             }
         }
 
-        stage('Cleanup') {
+       tage('Train Model') {
             steps {
-                sh '''
-                    rm -rf artifacts venv
-                '''
+                sh 'docker build -f Dockerfile.train -t mlops-train:latest .'
+                sh 'docker run --rm -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} mlops-train:latest'
             }
         }
 
-        stage('Train & Register Model (Python 3.11)') {
-            agent {
-                docker {
-                    image 'python:3.11-slim'
-                    args '-u root'
-                    reuseNode true
-                }
-            }
+        stage('Promote Best Model') {
             steps {
-                sh '''
-                    set -e
-
-                    apt-get update
-                    apt-get install -y libgomp1 gcc
-
-                    python --version
-
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-
-                    python main.py
-
-                    echo "Artifacts generated:"
-                    ls -R artifacts
-                '''
+                sh 'python promote_best.py'
             }
         }
 
@@ -61,11 +39,17 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Build Serving Docker Image') {
+            steps {
+                sh 'docker build -f Dockerfile.serve -t noursaied622/mlops-app:latest .'
+            }
+        }
+
+        stage('Push Serving Image') {
             steps {
                 script {
-                    docker.withRegistry('', 'DOCKER_HUB') {
-                        docker.image("$IMAGE_NAME:latest").push('latest')
+                    docker.withRegistry('', DOCKER_HUB_CREDENTIALS) {
+                        docker.image('noursaied622/mlops-app:latest').push('latest')
                     }
                 }
             }
