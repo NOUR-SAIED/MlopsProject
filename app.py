@@ -3,7 +3,7 @@ import pandas as pd
 from mlProject.pipeline.prediction import PredictionPipeline
 
 app = Flask(__name__)
-model = PredictionPipeline()  # loads once at startup
+pipeline = PredictionPipeline()  # Load once at startup - FIXED: renamed to 'pipeline' to be consistent
 
 @app.route("/")
 def home():
@@ -32,9 +32,8 @@ def predict():
         # ✅ 3. CONVERT TO DATAFRAME (1 row) — THIS IS THE KEY FIX
         df = pd.DataFrame([input_data])  # ← list of dict → (1, N) DataFrame
 
-        # ✅ 4. Now safe to call predict() — it gets a DataFrame
-        obj = PredictionPipeline()
-        pred = obj.predict(df)[0]
+        # ✅ 4. Now safe to call predict() — USING THE GLOBAL PIPELINE INSTANCE
+        pred = pipeline.predict(df)[0]  # FIXED: Using the global 'pipeline' instead of creating new one
 
         return render_template("results.html", prediction=int(pred))
 
