@@ -17,7 +17,7 @@ pipeline {
             }
         }
 
-       tage('Train Model') {
+       stage('Train Model') {
             steps {
                 sh 'docker build -f Dockerfile.train -t mlops-train:latest .'
                 sh 'docker run --rm -e MLFLOW_TRACKING_PASSWORD=${MLFLOW_TRACKING_PASSWORD} mlops-train:latest'
